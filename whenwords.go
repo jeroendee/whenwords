@@ -381,6 +381,38 @@ func HumanDate(timestamp int64, reference ...int64) string {
 }
 
 // DateRange formats a date range with smart abbreviation.
+// Auto-swaps if start > end. Uses en dash (U+2013) not hyphen.
 func DateRange(start, end int64) string {
-	return ""
+	// Auto-swap if needed
+	if start > end {
+		start, end = end, start
+	}
+
+	startTime := time.Unix(start, 0).UTC()
+	endTime := time.Unix(end, 0).UTC()
+
+	// Truncate to calendar days for comparison
+	startDay := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, time.UTC)
+	endDay := time.Date(endTime.Year(), endTime.Month(), endTime.Day(), 0, 0, 0, 0, time.UTC)
+
+	// Same day
+	if startDay.Equal(endDay) {
+		return startTime.Format("January 2, 2006")
+	}
+
+	sameYear := startTime.Year() == endTime.Year()
+	sameMonth := sameYear && startTime.Month() == endTime.Month()
+
+	if sameMonth {
+		// Same month: "January 15–22, 2024" (en dash, no spaces)
+		return startTime.Format("January 2") + "–" + endTime.Format("2, 2006")
+	}
+
+	if sameYear {
+		// Same year, different months: "January 15 – February 15, 2024" (en dash with spaces)
+		return startTime.Format("January 2") + " – " + endTime.Format("January 2, 2006")
+	}
+
+	// Different years: full dates both sides
+	return startTime.Format("January 2, 2006") + " – " + endTime.Format("January 2, 2006")
 }

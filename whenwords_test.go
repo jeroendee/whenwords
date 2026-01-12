@@ -140,11 +140,18 @@ func TestHumanDate(t *testing.T) {
 	}
 }
 
-// TestDateRangeStub verifies DateRange exists and returns empty string (stub).
-func TestDateRangeStub(t *testing.T) {
-	result := DateRange(0, 0)
-	if result != "" {
-		t.Errorf("DateRange stub should return empty string, got %q", result)
+// TestDateRange tests DateRange function using YAML test data.
+func TestDateRange(t *testing.T) {
+	suite := loadTestCases()
+
+	for _, tc := range suite.DateRange {
+		t.Run(tc.Name, func(t *testing.T) {
+			got := DateRange(tc.Input.Start, tc.Input.End)
+			if got != tc.Output {
+				t.Errorf("DateRange(%d, %d) = %q, want %q",
+					tc.Input.Start, tc.Input.End, got, tc.Output)
+			}
+		})
 	}
 }
 
