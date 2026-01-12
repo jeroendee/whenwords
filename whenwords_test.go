@@ -2,7 +2,10 @@ package whenwords
 
 import (
 	"errors"
+	"os"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // TestErrorVariables verifies exported error variables exist and are non-nil.
@@ -118,5 +121,113 @@ func TestErrorsAreDistinct(t *testing.T) {
 				t.Errorf("Error %d and %d should be distinct", i, j)
 			}
 		}
+	}
+}
+
+// --- YAML Test Infrastructure ---
+
+// TestSuite represents the full test data from tests.yaml.
+type TestSuite struct {
+	Version       string              `yaml:"version"`
+	TimeAgo       []TimeAgoTest       `yaml:"timeago"`
+	Duration      []DurationTest      `yaml:"duration"`
+	ParseDuration []ParseDurationTest `yaml:"parse_duration"`
+	HumanDate     []HumanDateTest     `yaml:"human_date"`
+	DateRange     []DateRangeTest     `yaml:"date_range"`
+}
+
+// TimeAgoInput represents input for timeago tests.
+type TimeAgoInput struct {
+	Timestamp int64 `yaml:"timestamp"`
+	Reference int64 `yaml:"reference"`
+}
+
+// TimeAgoTest represents a single timeago test case.
+type TimeAgoTest struct {
+	Name   string       `yaml:"name"`
+	Input  TimeAgoInput `yaml:"input"`
+	Output string       `yaml:"output"`
+}
+
+// DurationOptions represents optional configuration for duration tests.
+type DurationOptions struct {
+	Compact  bool `yaml:"compact"`
+	MaxUnits int  `yaml:"max_units"`
+}
+
+// DurationInput represents input for duration tests.
+type DurationInput struct {
+	Seconds int64           `yaml:"seconds"`
+	Options DurationOptions `yaml:"options"`
+}
+
+// DurationTest represents a single duration test case.
+type DurationTest struct {
+	Name   string        `yaml:"name"`
+	Input  DurationInput `yaml:"input"`
+	Output string        `yaml:"output"`
+	Error  bool          `yaml:"error"`
+}
+
+// ParseDurationTest represents a single parse_duration test case.
+type ParseDurationTest struct {
+	Name   string `yaml:"name"`
+	Input  string `yaml:"input"`
+	Output int64  `yaml:"output"`
+	Error  bool   `yaml:"error"`
+}
+
+// HumanDateInput represents input for human_date tests.
+type HumanDateInput struct {
+	Timestamp int64 `yaml:"timestamp"`
+	Reference int64 `yaml:"reference"`
+}
+
+// HumanDateTest represents a single human_date test case.
+type HumanDateTest struct {
+	Name   string         `yaml:"name"`
+	Input  HumanDateInput `yaml:"input"`
+	Output string         `yaml:"output"`
+}
+
+// DateRangeInput represents input for date_range tests.
+type DateRangeInput struct {
+	Start int64 `yaml:"start"`
+	End   int64 `yaml:"end"`
+}
+
+// DateRangeTest represents a single date_range test case.
+type DateRangeTest struct {
+	Name   string         `yaml:"name"`
+	Input  DateRangeInput `yaml:"input"`
+	Output string         `yaml:"output"`
+}
+
+// loadTestCases loads test data from testdata/tests.yaml.
+func loadTestCases() TestSuite {
+	data, err := os.ReadFile("testdata/tests.yaml")
+	if err != nil {
+		panic("failed to read testdata/tests.yaml: " + err.Error())
+	}
+
+	var suite TestSuite
+	if err := yaml.Unmarshal(data, &suite); err != nil {
+		panic("failed to parse testdata/tests.yaml: " + err.Error())
+	}
+
+	return suite
+}
+
+// TestYAMLInfrastructure verifies YAML test loading infrastructure works.
+func TestYAMLInfrastructure(t *testing.T) {
+	suite := loadTestCases()
+
+	// Count total test cases across all categories
+	totalTests := len(suite.TimeAgo) + len(suite.Duration) + len(suite.ParseDuration) + len(suite.HumanDate) + len(suite.DateRange)
+
+	t.Logf("Loaded %d test cases from tests.yaml (version %s)", totalTests, suite.Version)
+
+	if totalTests == 0 {
+		t.Error("Expected at least one test case to be loaded")
 	}
 }
