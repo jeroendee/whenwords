@@ -45,19 +45,18 @@ func TestWithMaxUnits(t *testing.T) {
 	}
 }
 
-// TestTimeAgoStub verifies TimeAgo function exists and returns empty string (stub).
-func TestTimeAgoStub(t *testing.T) {
-	result := TimeAgo(0)
-	if result != "" {
-		t.Errorf("TimeAgo stub should return empty string, got %q", result)
-	}
-}
+// TestTimeago tests TimeAgo function using YAML test data.
+func TestTimeago(t *testing.T) {
+	suite := loadTestCases()
 
-// TestTimeAgoWithReferenceStub verifies TimeAgo accepts optional reference.
-func TestTimeAgoWithReferenceStub(t *testing.T) {
-	result := TimeAgo(0, 0)
-	if result != "" {
-		t.Errorf("TimeAgo stub with reference should return empty string, got %q", result)
+	for _, tc := range suite.TimeAgo {
+		t.Run(tc.Name, func(t *testing.T) {
+			got := TimeAgo(tc.Input.Timestamp, tc.Input.Reference)
+			if got != tc.Output {
+				t.Errorf("TimeAgo(%d, %d) = %q, want %q",
+					tc.Input.Timestamp, tc.Input.Reference, got, tc.Output)
+			}
+		})
 	}
 }
 
