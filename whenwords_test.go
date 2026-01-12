@@ -125,19 +125,18 @@ func TestParseDuration(t *testing.T) {
 	}
 }
 
-// TestHumanDateStub verifies HumanDate exists and returns empty string (stub).
-func TestHumanDateStub(t *testing.T) {
-	result := HumanDate(0)
-	if result != "" {
-		t.Errorf("HumanDate stub should return empty string, got %q", result)
-	}
-}
+// TestHumanDate tests HumanDate function using YAML test data.
+func TestHumanDate(t *testing.T) {
+	suite := loadTestCases()
 
-// TestHumanDateWithReferenceStub verifies HumanDate accepts optional reference.
-func TestHumanDateWithReferenceStub(t *testing.T) {
-	result := HumanDate(0, 0)
-	if result != "" {
-		t.Errorf("HumanDate stub with reference should return empty string, got %q", result)
+	for _, tc := range suite.HumanDate {
+		t.Run(tc.Name, func(t *testing.T) {
+			got := HumanDate(tc.Input.Timestamp, tc.Input.Reference)
+			if got != tc.Output {
+				t.Errorf("HumanDate(%d, %d) = %q, want %q",
+					tc.Input.Timestamp, tc.Input.Reference, got, tc.Output)
+			}
+		})
 	}
 }
 

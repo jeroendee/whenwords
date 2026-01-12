@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Error variables for common error conditions.
@@ -343,7 +344,40 @@ func parseUnitValuePairs(input string) (int64, bool) {
 // HumanDate returns a contextual date string.
 // The optional reference parameter is used for comparison to determine relative output.
 func HumanDate(timestamp int64, reference ...int64) string {
-	return ""
+	ref := timestamp
+	if len(reference) > 0 {
+		ref = reference[0]
+	}
+
+	// Convert to UTC time objects
+	tsTime := time.Unix(timestamp, 0).UTC()
+	refTime := time.Unix(ref, 0).UTC()
+
+	// Truncate to UTC midnight for calendar day comparison
+	tsDay := time.Date(tsTime.Year(), tsTime.Month(), tsTime.Day(), 0, 0, 0, 0, time.UTC)
+	refDay := time.Date(refTime.Year(), refTime.Month(), refTime.Day(), 0, 0, 0, 0, time.UTC)
+
+	// Calculate day difference
+	dayDiff := int(tsDay.Sub(refDay).Hours() / 24)
+
+	switch {
+	case dayDiff == 0:
+		return "Today"
+	case dayDiff == -1:
+		return "Yesterday"
+	case dayDiff == 1:
+		return "Tomorrow"
+	case dayDiff >= -6 && dayDiff <= -2:
+		return "Last " + tsTime.Weekday().String()
+	case dayDiff >= 2 && dayDiff <= 6:
+		return "This " + tsTime.Weekday().String()
+	default:
+		// Format as date
+		if tsTime.Year() == refTime.Year() {
+			return tsTime.Format("January 2")
+		}
+		return tsTime.Format("January 2, 2006")
+	}
 }
 
 // DateRange formats a date range with smart abbreviation.
