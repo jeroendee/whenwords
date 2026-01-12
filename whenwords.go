@@ -141,8 +141,93 @@ func itoa(n int) string {
 }
 
 // Duration formats a duration in seconds as a human-readable string.
-func Duration(seconds float64, opts ...DurationOption) string {
-	return ""
+// It returns ErrNegativeDuration for negative input.
+func Duration(seconds int64, opts ...DurationOption) (string, error) {
+	if seconds < 0 {
+		return "", ErrNegativeDuration
+	}
+
+	cfg := &durationConfig{maxUnits: 2}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	// Time unit constants
+	const (
+		secondsPerMinute = 60
+		secondsPerHour   = 3600
+		secondsPerDay    = 86400
+		secondsPerMonth  = 30 * secondsPerDay
+		secondsPerYear   = 365 * secondsPerDay
+	)
+
+	// Unit names for compact and verbose output
+	type unit struct {
+		seconds int64
+		compact string
+		verbose string
+	}
+	units := []unit{
+		{secondsPerYear, "y", "year"},
+		{secondsPerMonth, "mo", "month"},
+		{secondsPerDay, "d", "day"},
+		{secondsPerHour, "h", "hour"},
+		{secondsPerMinute, "m", "minute"},
+		{1, "s", "second"},
+	}
+
+	// Extract non-zero units
+	type part struct {
+		value   int64
+		compact string
+		verbose string
+	}
+	var parts []part
+	remaining := seconds
+
+	for _, u := range units {
+		if remaining >= u.seconds {
+			count := remaining / u.seconds
+			remaining %= u.seconds
+			parts = append(parts, part{count, u.compact, u.verbose})
+		}
+	}
+
+	// Handle zero case
+	if len(parts) == 0 {
+		if cfg.compact {
+			return "0s", nil
+		}
+		return "0 seconds", nil
+	}
+
+	// Apply max_units limit
+	if cfg.maxUnits > 0 && len(parts) > cfg.maxUnits {
+		parts = parts[:cfg.maxUnits]
+	}
+
+	// Build output string
+	var result string
+	for i, p := range parts {
+		if i > 0 {
+			if cfg.compact {
+				result += " "
+			} else {
+				result += ", "
+			}
+		}
+
+		if cfg.compact {
+			result += itoa(int(p.value)) + p.compact
+		} else {
+			result += itoa(int(p.value)) + " " + p.verbose
+			if p.value != 1 {
+				result += "s"
+			}
+		}
+	}
+
+	return result, nil
 }
 
 // ParseDuration parses a human-written duration string into seconds.

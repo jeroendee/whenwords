@@ -60,19 +60,41 @@ func TestTimeago(t *testing.T) {
 	}
 }
 
-// TestDurationStub verifies Duration function exists and returns empty string (stub).
-func TestDurationStub(t *testing.T) {
-	result := Duration(0)
-	if result != "" {
-		t.Errorf("Duration stub should return empty string, got %q", result)
-	}
-}
+// TestDuration tests Duration function using YAML test data.
+func TestDuration(t *testing.T) {
+	suite := loadTestCases()
 
-// TestDurationWithOptionsStub verifies Duration accepts options.
-func TestDurationWithOptionsStub(t *testing.T) {
-	result := Duration(0, WithCompact(), WithMaxUnits(1))
-	if result != "" {
-		t.Errorf("Duration stub with options should return empty string, got %q", result)
+	for _, tc := range suite.Duration {
+		t.Run(tc.Name, func(t *testing.T) {
+			var opts []DurationOption
+			if tc.Input.Options.Compact {
+				opts = append(opts, WithCompact())
+			}
+			if tc.Input.Options.MaxUnits > 0 {
+				opts = append(opts, WithMaxUnits(tc.Input.Options.MaxUnits))
+			}
+
+			got, err := Duration(tc.Input.Seconds, opts...)
+
+			if tc.Error {
+				if err == nil {
+					t.Errorf("Duration(%d) expected error, got nil", tc.Input.Seconds)
+				}
+				if !errors.Is(err, ErrNegativeDuration) {
+					t.Errorf("Duration(%d) expected ErrNegativeDuration, got %v", tc.Input.Seconds, err)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Duration(%d) unexpected error: %v", tc.Input.Seconds, err)
+				return
+			}
+
+			if got != tc.Output {
+				t.Errorf("Duration(%d) = %q, want %q", tc.Input.Seconds, got, tc.Output)
+			}
+		})
 	}
 }
 
