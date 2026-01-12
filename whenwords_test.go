@@ -150,3 +150,17 @@ func TestDurationOptionType(t *testing.T) {
 		t.Errorf("WithMaxUnits(2) should set maxUnits to 2, got %d", opts2.maxUnits)
 	}
 }
+
+func TestTimeago(t *testing.T) {
+	spec := loadTestSpec(t)
+
+	for _, tc := range spec.Timeago {
+		t.Run(tc.Name, func(t *testing.T) {
+			got := TimeAgo(tc.Input.Timestamp, tc.Input.Reference)
+			if got != tc.Output {
+				t.Errorf("TimeAgo(%d, %d) = %q, want %q",
+					tc.Input.Timestamp, tc.Input.Reference, got, tc.Output)
+			}
+		})
+	}
+}
