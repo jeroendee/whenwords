@@ -1,7 +1,12 @@
 // Package whenwords provides human-friendly time formatting and parsing.
 package whenwords
 
-import "errors"
+import (
+	"errors"
+	"regexp"
+	"strconv"
+	"strings"
+)
 
 // Error variables for common error conditions.
 var (
@@ -232,7 +237,107 @@ func Duration(seconds int64, opts ...DurationOption) (string, error) {
 
 // ParseDuration parses a human-written duration string into seconds.
 func ParseDuration(input string) (int64, error) {
-	return 0, nil
+	// Handle empty input
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return 0, ErrEmptyInput
+	}
+
+	// Check for negative sign
+	if strings.HasPrefix(input, "-") {
+		return 0, ErrNegativeValue
+	}
+
+	// Try colon notation first (h:mm or h:mm:ss)
+	if seconds, ok := parseColonNotation(input); ok {
+		return seconds, nil
+	}
+
+	// Tokenize with regex for unit-value pairs
+	seconds, found := parseUnitValuePairs(input)
+	if !found {
+		return 0, ErrUnparseable
+	}
+
+	return seconds, nil
+}
+
+// parseColonNotation parses h:mm or h:mm:ss format.
+func parseColonNotation(input string) (int64, bool) {
+	// Match patterns like 2:30 or 1:30:00 or 0:05:30
+	colonPattern := regexp.MustCompile(`^(\d+):(\d{2})(?::(\d{2}))?$`)
+	matches := colonPattern.FindStringSubmatch(input)
+	if matches == nil {
+		return 0, false
+	}
+
+	hours, _ := strconv.ParseInt(matches[1], 10, 64)
+	minutes, _ := strconv.ParseInt(matches[2], 10, 64)
+	var seconds int64
+	if matches[3] != "" {
+		seconds, _ = strconv.ParseInt(matches[3], 10, 64)
+	}
+
+	return hours*3600 + minutes*60 + seconds, true
+}
+
+// parseUnitValuePairs extracts value-unit pairs and sums them.
+func parseUnitValuePairs(input string) (int64, bool) {
+	// Unit multipliers in seconds
+	unitMultipliers := map[string]int64{
+		"w":       604800, // week
+		"week":    604800,
+		"weeks":   604800,
+		"d":       86400, // day
+		"day":     86400,
+		"days":    86400,
+		"h":       3600, // hour
+		"hr":      3600,
+		"hrs":     3600,
+		"hour":    3600,
+		"hours":   3600,
+		"m":       60, // minute
+		"min":     60,
+		"mins":    60,
+		"minute":  60,
+		"minutes": 60,
+		"s":       1, // second
+		"sec":     1,
+		"secs":    1,
+		"second":  1,
+		"seconds": 1,
+	}
+
+	// Pattern: number (possibly decimal) followed by unit
+	// Handles: 2h, 2.5h, 2 hours, 2.5 hours
+	pattern := regexp.MustCompile(`(?i)(\d+(?:\.\d+)?)\s*(w|weeks?|d|days?|h|hrs?|hours?|m|mins?|minutes?|s|secs?|seconds?)`)
+
+	matches := pattern.FindAllStringSubmatch(input, -1)
+	if len(matches) == 0 {
+		return 0, false
+	}
+
+	var total int64
+	for _, match := range matches {
+		valueStr := match[1]
+		unit := strings.ToLower(match[2])
+
+		multiplier, ok := unitMultipliers[unit]
+		if !ok {
+			continue
+		}
+
+		// Handle decimal values
+		if strings.Contains(valueStr, ".") {
+			value, _ := strconv.ParseFloat(valueStr, 64)
+			total += int64(value * float64(multiplier))
+		} else {
+			value, _ := strconv.ParseInt(valueStr, 10, 64)
+			total += value * multiplier
+		}
+	}
+
+	return total, true
 }
 
 // HumanDate returns a contextual date string.

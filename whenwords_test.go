@@ -98,14 +98,30 @@ func TestDuration(t *testing.T) {
 	}
 }
 
-// TestParseDurationStub verifies ParseDuration exists and returns (0, nil) stub.
-func TestParseDurationStub(t *testing.T) {
-	result, err := ParseDuration("1h")
-	if result != 0 {
-		t.Errorf("ParseDuration stub should return 0, got %d", result)
-	}
-	if err != nil {
-		t.Errorf("ParseDuration stub should return nil error, got %v", err)
+// TestParseDuration tests ParseDuration function using YAML test data.
+func TestParseDuration(t *testing.T) {
+	suite := loadTestCases()
+
+	for _, tc := range suite.ParseDuration {
+		t.Run(tc.Name, func(t *testing.T) {
+			got, err := ParseDuration(tc.Input)
+
+			if tc.Error {
+				if err == nil {
+					t.Errorf("ParseDuration(%q) expected error, got nil", tc.Input)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("ParseDuration(%q) unexpected error: %v", tc.Input, err)
+				return
+			}
+
+			if got != tc.Output {
+				t.Errorf("ParseDuration(%q) = %d, want %d", tc.Input, got, tc.Output)
+			}
+		})
 	}
 }
 
